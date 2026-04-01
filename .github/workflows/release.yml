@@ -4,11 +4,18 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     name: Build ${{ matrix.label }}
     runs-on: ${{ matrix.runner }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - label: macOS universal
@@ -49,7 +56,10 @@ jobs:
         env:
           VERSION: ${{ github.ref_name }}
 
-      - name: Upload release assets
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ${{ matrix.assets }}
+      - name: Upload to release
+        run: |
+          for file in ${{ matrix.assets }}; do
+            gh release upload "${{ github.ref_name }}" "$file" --clobber
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
