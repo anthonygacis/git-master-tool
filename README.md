@@ -11,13 +11,13 @@ A CLI tool to compare two git branches and identify which commits from a source 
 ### macOS / Linux
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/anthonygacis/git-compare/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/anthonygacis/git-compare/main/scripts/install.sh | bash
 ```
 
 ### Windows (PowerShell)
 
 ```powershell
-irm https://raw.githubusercontent.com/anthonygacis/git-compare/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/anthonygacis/git-compare/main/scripts/install.ps1 | iex
 ```
 
 The installer automatically:
@@ -39,6 +39,8 @@ cd git-compare
 make install
 ```
 
+`make install` builds a universal macOS binary and copies it to `/usr/local/bin`. See [Makefile](Makefile) for all available targets (`release`, `build-linux-amd64`, `build-windows`, etc.).
+
 ## Usage
 
 ```
@@ -49,13 +51,15 @@ All options can be provided as flags, set in `.gitcompare.yml`, or both — **fl
 
 ### Flags
 
-| Flag            | Description                                  | Default     |
-|-----------------|----------------------------------------------|-------------|
-| `-source`       | Source branch (commits to cherry-pick from)  |             |
-| `-target`       | Target branch (branch to cherry-pick into)   |             |
-| `-show`         | `pending` or `all`                           | `all`       |
-| `-show-author`  | `true` or `false`                            | `true`      |
-| `-format`       | `default`, `table`, `json`, or `csv`         | `default`   |
+| Flag                    | Description                                        | Default     |
+|-------------------------|----------------------------------------------------|-------------|
+| `-source`               | Source branch (commits to cherry-pick from)        |             |
+| `-target`               | Target branch (branch to cherry-pick into)         |             |
+| `-show`                 | `pending` or `all`                                 | `all`       |
+| `-show-author`          | `true` or `false`                                  | `true`      |
+| `-format`               | `default`, `table`, `json`, or `csv`               | `default`   |
+| `-prefixes`             | Comma-separated Jira prefixes (e.g. `XS,XI`)       |             |
+| `-show-ticket-authors`  | Show authors in ticket summary: `true` or `false`  | `true`      |
 
 ### Examples
 
@@ -71,6 +75,9 @@ gitcompare -format json
 
 # hide author, show only pending
 gitcompare -show-author=false -show pending develop master
+
+# ticket summary grouped by Jira prefix
+gitcompare -prefixes XS,XI develop master
 ```
 
 ## Output formats
@@ -144,6 +151,24 @@ Machine-readable output, useful for piping into other tools.
 }
 ```
 
+## Ticket summary
+
+When `-prefixes` is set, `gitcompare` scans each commit message for Jira ticket IDs and groups them by prefix. A single commit can match multiple tickets (e.g. `XI-002 XS-001 update auth flow` counts toward both). The summary respects the `-show` filter — only commits visible in the output are counted.
+
+```text
+Ticket Summary
+
+XS
+  XS-001        2 commits   Jane Doe
+  total         2 commits
+
+XI
+  XI-002        2 commits   Jane Doe
+  total         2 commits
+```
+
+In JSON output the ticket summary appears as a `ticket_summary` array with a `total` per prefix group.
+
 ## Config file
 
 Place a `.gitcompare.yml` file in the root of your repository to set defaults.
@@ -151,21 +176,46 @@ Place a `.gitcompare.yml` file in the root of your repository to set defaults.
 ```yaml
 source: develop
 target: master
-show: pending        # "pending" or "all" (default: "all")
-show_author: true    # show commit author (default: true)
-format: default      # "default", "table", or "json" (default: "default")
+show: all                  # "pending" or "all" (default: "all")
+show_author: true          # show commit author (default: true)
+format: default            # "default", "table", "json", or "csv" (default: "default")
+prefixes:                  # Jira prefixes to scan for ticket summary (default: none)
+  - XS
+  - XI
+show_ticket_authors: true  # show authors in ticket summary (default: true)
 ```
 
-| Field         | Description                                                                                        |
-|---------------|----------------------------------------------------------------------------------------------------|
-| `source`      | Branch containing the commits you are cherry-picking from                                          |
-| `target`      | Branch you are cherry-picking into                                                                 |
-| `show`        | `all` shows pending + already applied. `pending` shows only commits that still need cherry-picking |
-| `show_author` | `true` displays the commit author next to each entry. `false` hides it. Defaults to `true`         |
-| `format`      | Output style: `default` (colored list), `table` (box table), or `json`                             |
+| Field                 | Description                                                                                        |
+|-----------------------|----------------------------------------------------------------------------------------------------|
+| `source`              | Branch containing the commits you are cherry-picking from                                          |
+| `target`              | Branch you are cherry-picking into                                                                 |
+| `show`                | `all` shows pending + already applied. `pending` shows only commits that still need cherry-picking |
+| `show_author`         | Show commit author next to each entry. Defaults to `true`                                          |
+| `format`              | Output style: `default`, `table`, `json`, or `csv`                                                 |
+| `prefixes`            | List of Jira ticket prefixes to scan for and group in the ticket summary                           |
+| `show_ticket_authors` | Show authors per ticket in the ticket summary. Defaults to `true`                                  |
+
+## Project structure
+
+```text
+git-compare/
+├── Makefile
+├── README.md
+├── src/               Go source code
+│   ├── main.go
+│   ├── git.go
+│   ├── output.go
+│   ├── tickets.go
+│   ├── go.mod
+│   └── go.sum
+├── scripts/           Installer scripts
+│   ├── install.sh     macOS / Linux
+│   └── install.ps1    Windows
+└── dist/              Build output (generated by make)
+```
 
 ## Requirements
 
-- Go 1.21+
 - Git installed and available on `$PATH`
 - Must be run from inside a git repository
+- Go 1.21+ only required when building from source
