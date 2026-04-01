@@ -12,6 +12,8 @@ import (
 
 const configFile = ".gitcompare.yml"
 
+var version = "dev"
+
 type Config struct {
 	Source            string   `yaml:"source"`
 	Target            string   `yaml:"target"`
@@ -24,6 +26,7 @@ type Config struct {
 
 func main() {
 	var (
+		flagVersion           = flag.Bool("version", false, "print version and exit")
 		flagSource            = flag.String("source", "", "source branch")
 		flagTarget            = flag.String("target", "", "target branch")
 		flagShow              = flag.String("show", "", "output filter: pending|all")
@@ -38,6 +41,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "\nConfig file: %s (flags take precedence)\n", configFile)
 	}
 	flag.Parse()
+
+	if *flagVersion {
+		fmt.Printf("gitcompare %s\n", version)
+		os.Exit(0)
+	}
 
 	cfg := loadConfig()
 
