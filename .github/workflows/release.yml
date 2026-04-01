@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    name: Build ${{ matrix.label }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - label: macOS universal
+            runner: macos-latest
+            make_target: universal
+            assets: |
+              dist/gitcompare-darwin-universal
+              dist/gitcompare-darwin-amd64
+              dist/gitcompare-darwin-arm64
+
+          - label: Linux amd64
+            runner: ubuntu-latest
+            make_target: build-linux-amd64
+            assets: dist/gitcompare-linux-amd64
+
+          - label: Linux arm64
+            runner: ubuntu-latest
+            make_target: build-linux-arm64
+            assets: dist/gitcompare-linux-arm64
+
+          - label: Windows amd64
+            runner: ubuntu-latest
+            make_target: build-windows
+            assets: dist/gitcompare-windows-amd64.exe
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: src/go.mod
+          cache-dependency-path: src/go.sum
+
+      - name: Build
+        run: make ${{ matrix.make_target }}
+        env:
+          VERSION: ${{ github.ref_name }}
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.assets }}
