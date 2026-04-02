@@ -1,4 +1,4 @@
-module gitcompare
+module gitmt
 
 go 1.21
 

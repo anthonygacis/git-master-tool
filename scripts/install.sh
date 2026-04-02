@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BINARY="gitcompare"
-REPO="anthonygacis/git-compare"
+BINARY="gitmt"
+REPO="anthonygacis/git-master-tool"
 GITHUB_API="https://api.github.com/repos/${REPO}/releases/latest"
 INSTALL_DIR=""
 
@@ -135,7 +135,7 @@ verify() {
     fi
 }
 
-echo -e "\n${BOLD}${CYAN}gitcompare installer${RESET}\n"
+echo -e "\n${BOLD}${CYAN}gitmt installer${RESET}\n"
 
 detect_platform
 info "Platform: ${OS}/${ARCH}"
@@ -146,4 +146,4 @@ download_binary
 install_binary
 verify
 
-echo -e "\n${BOLD}Done!${RESET} Run:  gitcompare develop master\n"
+echo -e "\n${BOLD}Done!${RESET} Run:  gitmt compare develop master\n"

@@ -1,4 +1,4 @@
-BINARY    := gitcompare
+BINARY    := gitmt
 SRC       := src
 DIST      := dist
 VERSION   ?= $(shell git -C $(SRC) describe --tags --always --dirty 2>/dev/null || echo "dev")

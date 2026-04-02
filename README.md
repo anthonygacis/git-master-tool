@@ -1,53 +1,67 @@
-# gitcompare
+# git-master-tool
 
-A CLI tool to compare two git branches and identify which commits from a source branch have not yet been cherry-picked into a target branch.
+A CLI toolkit to supercharge your git workflow. Run as `gitmt <command>`.
 
-## How it works
+## Commands
 
-`gitcompare` finds the common ancestor of both branches, then lists every commit in the source branch since that point. Each commit is matched against the target branch **by commit message** — since cherry-picking preserves the original message, a match means the commit has already been applied.
+| Command   | Description                                       |
+|-----------|---------------------------------------------------|
+| `compare` | Compare two branches and surface unmerged commits |
 
-## Installation
+More commands coming soon.
 
-### macOS / Linux
+---
+
+## compare
+
+Identify which commits from a source branch have not yet been cherry-picked into a target branch.
+
+### How it works
+
+`gitmt compare` finds the common ancestor of both branches, then lists every commit in the source branch since that point. Each commit is matched against the target branch **by commit message** — since cherry-picking preserves the original message, a match means the commit has already been applied.
+
+### Installation
+
+#### macOS / Linux
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/anthonygacis/git-compare/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/anthonygacis/git-master-tool/main/scripts/install.sh | bash
 ```
 
-### Windows (PowerShell)
+#### Windows (PowerShell)
 
 ```powershell
-irm https://raw.githubusercontent.com/anthonygacis/git-compare/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/anthonygacis/git-master-tool/main/scripts/install.ps1 | iex
 ```
 
 The installer automatically:
 
 - Detects your OS and architecture
 - Downloads the latest release binary from GitHub
-- Installs to `/usr/local/bin` (macOS/Linux) or `%LOCALAPPDATA%\Programs\gitcompare` (Windows)
+- Installs to `/usr/local/bin` (macOS/Linux) or `%LOCALAPPDATA%\Programs\gitmt` (Windows)
 - Adds the install directory to your PATH if needed
 
 On macOS a universal binary is downloaded (runs natively on both Intel and Apple Silicon).
 
-### Build from source
+#### Build from source
 
 Requires Go 1.21+.
 
 ```bash
-git clone https://github.com/anthonygacis/git-compare.git
-cd git-compare
+git clone https://github.com/anthonygacis/git-master-tool.git
+cd git-master-tool
 make install
 ```
 
 `make install` builds a universal macOS binary and copies it to `/usr/local/bin`. See [Makefile](Makefile) for all available targets (`release`, `build-linux-amd64`, `build-windows`, etc.).
 
-## Usage
+### Usage
 
 ```
-gitcompare [flags] [source target]
+gitmt compare [flags] [source target]
 ```
 
-All options can be provided as flags, set in `.gitcompare.yml`, or both — **flags always take precedence over the config file**.
+All options can be provided as flags, set in `.gitmt.yml`, or both — **flags always take precedence over the config file**.
 
 ### Flags
 
@@ -65,24 +79,24 @@ All options can be provided as flags, set in `.gitcompare.yml`, or both — **fl
 
 ```bash
 # positional args (shorthand)
-gitcompare develop master
+gitmt compare develop master
 
 # with flags
-gitcompare -show pending -format table develop master
+gitmt compare -show pending -format table develop master
 
 # use config file for source/target, override format
-gitcompare -format json
+gitmt compare -format json
 
 # hide author, show only pending
-gitcompare -show-author=false -show pending develop master
+gitmt compare -show-author=false -show pending develop master
 
 # ticket summary grouped by Jira prefix
-gitcompare -prefixes XS,XI develop master
+gitmt compare -prefixes XS,XI develop master
 ```
 
-## Output formats
+### Output formats
 
-### default
+#### default
 
 Colored list grouped by status.
 
@@ -104,7 +118,7 @@ Summary
   applied    1 commit(s) already applied
 ```
 
-### table
+#### table
 
 Box-drawn table with dynamic column widths.
 
@@ -120,7 +134,7 @@ Box-drawn table with dynamic column widths.
   2 pending   1 applied
 ```
 
-### csv
+#### csv
 
 Standard CSV output — useful for importing into spreadsheets or further shell processing.
 
@@ -133,7 +147,7 @@ applied,eed2e8d,Jane Doe,feat: add feature A
 
 Fields with commas or quotes are automatically escaped per RFC 4180.
 
-### json
+#### json
 
 Machine-readable output, useful for piping into other tools.
 
@@ -151,9 +165,9 @@ Machine-readable output, useful for piping into other tools.
 }
 ```
 
-## Ticket summary
+### Ticket summary
 
-When `-prefixes` is set, `gitcompare` scans each commit message for Jira ticket IDs and groups them by prefix. A single commit can match multiple tickets (e.g. `XI-002 XS-001 update auth flow` counts toward both). The summary respects the `-show` filter — only commits visible in the output are counted.
+When `-prefixes` is set, `gitmt compare` scans each commit message for Jira ticket IDs and groups them by prefix. A single commit can match multiple tickets (e.g. `XI-002 XS-001 update auth flow` counts toward both). The summary respects the `-show` filter — only commits visible in the output are counted.
 
 ```text
 Ticket Summary
@@ -169,9 +183,9 @@ XI
 
 In JSON output the ticket summary appears as a `ticket_summary` array with a `total` per prefix group.
 
-## Config file
+### Config file
 
-Place a `.gitcompare.yml` file in the root of your repository to set defaults.
+Place a `.gitmt.yml` file in the root of your repository to set defaults for `gitmt compare`.
 
 ```yaml
 source: develop
@@ -195,10 +209,12 @@ show_ticket_authors: true  # show authors in ticket summary (default: true)
 | `prefixes`            | List of Jira ticket prefixes to scan for and group in the ticket summary                           |
 | `show_ticket_authors` | Show authors per ticket in the ticket summary. Defaults to `true`                                  |
 
+---
+
 ## Project structure
 
 ```text
-git-compare/
+git-master-tool/
 ├── Makefile
 ├── README.md
 ├── src/               Go source code

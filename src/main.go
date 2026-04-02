@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const configFile = ".gitcompare.yml"
+const configFile = ".gitmt.yml"
 
 var version = "dev"
 
@@ -25,8 +25,32 @@ type Config struct {
 }
 
 func main() {
+	if len(os.Args) < 2 {
+		printMainUsage()
+		os.Exit(1)
+	}
+
+	cmd := os.Args[1]
+	os.Args = append(os.Args[:1], os.Args[2:]...)
+
+	switch cmd {
+	case "compare":
+		runCompare()
+	case "version", "--version", "-version":
+		fmt.Printf("gitmt %s\n", version)
+	default:
+		fmt.Fprintf(os.Stderr, "unknown command: %q\n\n", cmd)
+		printMainUsage()
+		os.Exit(1)
+	}
+}
+
+func printMainUsage() {
+	fmt.Fprintf(os.Stderr, "Usage: gitmt <command> [flags]\n\nCommands:\n  compare   Compare two git branches\n  version   Print version\n\nRun 'gitmt <command> --help' for more information.\n")
+}
+
+func runCompare() {
 	var (
-		flagVersion           = flag.Bool("version", false, "print version and exit")
 		flagSource            = flag.String("source", "", "source branch")
 		flagTarget            = flag.String("target", "", "target branch")
 		flagShow              = flag.String("show", "", "output filter: pending|all")
@@ -36,16 +60,11 @@ func main() {
 		flagShowTicketAuthors = flag.String("show-ticket-authors", "", "show authors in ticket summary: true|false")
 	)
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s [flags] [source target]\n\nFlags:\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: gitmt compare [flags] [source target]\n\nFlags:\n")
 		flag.PrintDefaults()
 		fmt.Fprintf(os.Stderr, "\nConfig file: %s (flags take precedence)\n", configFile)
 	}
 	flag.Parse()
-
-	if *flagVersion {
-		fmt.Printf("gitcompare %s\n", version)
-		os.Exit(0)
-	}
 
 	cfg := loadConfig()
 
