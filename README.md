@@ -8,8 +8,7 @@ A CLI toolkit to supercharge your git workflow. Run as `gitmt <command>`.
 |-----------|--------------------------------------------------------------|
 | `compare` | Compare two branches and surface unmerged commits            |
 | `scan`    | Group pending commits into safe cherry-pick batches          |
-
-More commands coming soon.
+| `upgrade` | Upgrade gitmt to the latest release                          |
 
 ---
 
@@ -266,6 +265,45 @@ When all pending commits are independent the output shows one green batch per co
 
 ```text
 All commits already applied — nothing to scan.
+```
+
+---
+
+## upgrade
+
+Downloads and replaces the current binary with the latest release from GitHub. The platform and architecture are detected automatically.
+
+```bash
+gitmt upgrade
+```
+
+If gitmt is already on the latest version, the command exits early:
+
+```text
+Upgrade gitmt
+
+→ Checking latest release...
+✓ Already on the latest version (v0.1.0)
+```
+
+Otherwise it downloads the new binary and installs it in-place:
+
+```text
+Upgrade gitmt
+
+→ Checking latest release...
+  current : v0.0.3
+  latest  : v0.1.0
+
+→ Downloading gitmt-darwin-universal...
+→ Installing to /usr/local/bin/gitmt...
+✓ Updated to v0.1.0
+```
+
+If the install path requires elevated permissions (e.g. `/usr/local/bin` on macOS), run with `sudo`:
+
+```bash
+sudo gitmt upgrade
 ```
 
 ---
