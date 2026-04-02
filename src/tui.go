@@ -26,13 +26,17 @@ func tuiSelect(header []string, items []tuiItem, multi bool) ([]int, bool) {
 	}
 	defer term.Restore(fd, oldState)
 
-	fmt.Print("\033[?25l")
-	defer fmt.Print("\033[?25h")
+	fmt.Print("\033[?1049h\033[?25l")
+	defer fmt.Print("\033[?1049l\033[?25h")
+
+	_, termH, _ := term.GetSize(fd)
+	if termH <= 0 {
+		termH = 24
+	}
 
 	cursor := 0
+	offset := 0 // index of first visible item
 	picked := make([]bool, len(items))
-	nLines := 0
-	first := true
 
 	var hint string
 	if multi {
@@ -41,24 +45,62 @@ func tuiSelect(header []string, items []tuiItem, multi bool) ([]int, bool) {
 		hint = colorDim + "  ↑↓ move   [enter] select   [q] quit" + colorReset
 	}
 
-	draw := func() {
-		if !first {
-			fmt.Printf("\033[%dA\r\033[0J", nLines)
-		}
-		first = false
-		nLines = 0
+	itemH := func(i int) int { return 1 + len(items[i].sub) }
 
-		line := func(s string) {
-			fmt.Printf("%s\r\n", s)
-			nLines++
+	// How many lines the fixed chrome uses (header + blank + above-indicator + below-indicator + blank + hint).
+	chrome := len(header) + 1 + 1 + 1 + 1 + 1
+
+	// Returns the index of the last item that fits in the viewport from 'from'.
+	lastVisible := func(from int) int {
+		avail := termH - chrome
+		if avail < 1 {
+			avail = 1
 		}
+		last := from
+		used := itemH(from)
+		for i := from + 1; i < len(items); i++ {
+			h := itemH(i)
+			if used+h > avail {
+				break
+			}
+			last = i
+			used += h
+		}
+		return last
+	}
+
+	// Slide the viewport so the cursor is always visible.
+	adjustOffset := func() {
+		if cursor < offset {
+			offset = cursor
+			return
+		}
+		for cursor > lastVisible(offset) {
+			offset++
+		}
+	}
+
+	draw := func() {
+		adjustOffset()
+		last := lastVisible(offset)
+
+		fmt.Print("\033[H")
+		line := func(s string) { fmt.Printf("\033[2K%s\r\n", s) }
 
 		for _, h := range header {
 			line(h)
 		}
 		line("")
 
-		for i, it := range items {
+		if offset > 0 {
+			line(fmt.Sprintf(colorDim+"  ↑ %d more above"+colorReset, offset))
+		} else {
+			line("")
+		}
+
+		for i := offset; i <= last; i++ {
+			it := items[i]
+
 			arrow := "   "
 			if i == cursor {
 				arrow = colorBold + " ▶ " + colorReset
@@ -79,14 +121,21 @@ func tuiSelect(header []string, items []tuiItem, multi bool) ([]int, bool) {
 			}
 
 			line(arrow + check + it.main + tag)
-
 			for _, s := range it.sub {
 				line("        " + colorDim + s + colorReset)
 			}
 		}
 
+		below := len(items) - 1 - last
+		if below > 0 {
+			line(fmt.Sprintf(colorDim+"  ↓ %d more below"+colorReset, below))
+		} else {
+			line("")
+		}
+
 		line("")
 		line(hint)
+		fmt.Print("\033[0J")
 	}
 
 	draw()
@@ -100,15 +149,12 @@ func tuiSelect(header []string, items []tuiItem, multi bool) ([]int, bool) {
 
 		switch {
 		case buf[0] == 3 || buf[0] == 'q':
-			fmt.Printf("\033[%dA\r\033[0J", nLines)
 			return nil, false
 
 		case buf[0] == 27 && n == 1:
-			fmt.Printf("\033[%dA\r\033[0J", nLines)
 			return nil, false
 
 		case buf[0] == 13 || buf[0] == 10:
-			fmt.Printf("\033[%dA\r\033[0J", nLines)
 			if !multi {
 				return []int{cursor}, true
 			}
@@ -124,7 +170,6 @@ func tuiSelect(header []string, items []tuiItem, multi bool) ([]int, bool) {
 			if multi {
 				picked[cursor] = !picked[cursor]
 			} else {
-				fmt.Printf("\033[%dA\r\033[0J", nLines)
 				return []int{cursor}, true
 			}
 			draw()
