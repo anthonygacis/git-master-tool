@@ -221,7 +221,15 @@ Analyzes pending commits and groups them into batches that must be cherry-picked
 gitmt scan [flags] [source target]
 ```
 
-Accepts the same `-source`, `-target`, and `.gitmt.yml` config as `compare`.
+### scan flags
+
+| Flag            | Description                       | Default |
+|-----------------|-----------------------------------|---------|
+| `-source`       | Source branch                     |         |
+| `-target`       | Target branch                     |         |
+| `-show-author`  | Show commit author: `true\|false` | `true`  |
+
+Reads `-source`, `-target`, and `show_author` from `.gitmt.yml` when present — flags take precedence.
 
 ### scan examples
 
@@ -229,11 +237,14 @@ Accepts the same `-source`, `-target`, and `.gitmt.yml` config as `compare`.
 # positional args
 gitmt scan develop master
 
+# hide author
+gitmt scan -show-author=false develop master
+
 # with flags
 gitmt scan -source develop -target master
 ```
 
-### Output
+### scan output
 
 Each batch is listed in order from newest to oldest commit. Independent commits are green; batches that must go together are yellow.
 
@@ -245,18 +256,18 @@ Scan — cherry-pick batches
   batches : 3
 
 ● Batch 1  2 commits — cherry-pick together
-  a1b2c3d  feat: update user auth service  (3 file(s))
-  e4f5g6h  fix: auth token validation edge case  (2 file(s))
+  a1b2c3d  (Jane Doe)  feat: update user auth service  (3 file(s))
+  e4f5g6h  (Jane Doe)  fix: auth token validation edge case  (2 file(s))
   shared:
     src/auth/service.go
     src/auth/token.go
 
 ● Batch 2  1 commit — independent
-  i7j8k9l  feat: add dashboard summary widget  (1 file(s))
+  i7j8k9l  (John Smith)  feat: add dashboard summary widget  (1 file(s))
 
 ● Batch 3  2 commits — cherry-pick together
-  m1n2o3p  refactor: extract payment helpers  (4 file(s))
-  q4r5s6t  fix: payment rounding error  (2 file(s))
+  m1n2o3p  (Jane Doe)  refactor: extract payment helpers  (4 file(s))
+  q4r5s6t  (Jane Doe)  fix: payment rounding error  (2 file(s))
   shared:
     src/payment/helpers.go
 ```
