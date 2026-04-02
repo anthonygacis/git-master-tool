@@ -12,6 +12,7 @@ func runScan() {
 		flagSource     = flag.String("source", "", "source branch")
 		flagTarget     = flag.String("target", "", "target branch")
 		flagShowAuthor = flag.String("show-author", "", "show commit author: true|false")
+		flagShowDate   = flag.String("show-date", "", "show commit date: true|false")
 	)
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: gitmt scan [flags] [source target]\n\nFlags:\n")
@@ -30,6 +31,10 @@ func runScan() {
 	if *flagShowAuthor != "" {
 		v := *flagShowAuthor == "true"
 		cfg.ShowAuthor = &v
+	}
+	if *flagShowDate != "" {
+		v := *flagShowDate == "true"
+		cfg.ShowDate = &v
 	}
 	if args := flag.Args(); len(args) == 2 {
 		cfg.Source = args[0]
@@ -82,7 +87,8 @@ func runScan() {
 
 	batches := groupBySharedFiles(pending, commitFiles)
 	showAuthor := cfg.ShowAuthor == nil || *cfg.ShowAuthor
-	printScanOutput(cfg.Source, cfg.Target, batches, commitFiles, showAuthor)
+	showDate := cfg.ShowDate == nil || *cfg.ShowDate
+	printScanOutput(cfg.Source, cfg.Target, batches, commitFiles, showAuthor, showDate)
 }
 
 type scanBatch struct {
@@ -181,7 +187,7 @@ func groupBySharedFiles(commits []Commit, commitFiles map[string][]string) []sca
 	return batches
 }
 
-func printScanOutput(source, target string, batches []scanBatch, commitFiles map[string][]string, showAuthor bool) {
+func printScanOutput(source, target string, batches []scanBatch, commitFiles map[string][]string, showAuthor, showDate bool) {
 	totalPending := 0
 	for _, b := range batches {
 		totalPending += len(b.commits)
@@ -204,8 +210,9 @@ func printScanOutput(source, target string, batches []scanBatch, commitFiles map
 
 		for _, c := range b.commits {
 			nFiles := len(commitFiles[c.Hash])
-			fmt.Printf("  %s%s%s%s  %s  %s(%d file(s))%s\n",
+			fmt.Printf("  %s%s%s%s%s  %s  %s(%d file(s))%s\n",
 				colorDim, c.Hash, colorReset,
+				fmtDate(c.Date, showDate),
 				fmtAuthor(c.Author, showAuthor),
 				c.Message,
 				colorDim, nFiles, colorReset,

@@ -10,12 +10,13 @@ import (
 type Commit struct {
 	Hash    string
 	Author  string
+	Date    string
 	Message string
 	Applied bool
 }
 
 func compareByMessage(source, target, mergeBase string) ([]Commit, error) {
-	sourceLog, err := git("log", "--pretty=format:%h\t%an\t%s", mergeBase+".."+source)
+	sourceLog, err := git("log", "--pretty=format:%h\t%an\t%ad\t%s", "--date=format:%Y-%m-%d %H:%M", mergeBase+".."+source)
 	if err != nil {
 		return nil, fmt.Errorf("reading source commits: %w", err)
 	}
@@ -37,15 +38,16 @@ func compareByMessage(source, target, mergeBase string) ([]Commit, error) {
 		if line == "" {
 			continue
 		}
-		parts := strings.SplitN(line, "\t", 3)
-		if len(parts) < 3 {
+		parts := strings.SplitN(line, "\t", 4)
+		if len(parts) < 4 {
 			continue
 		}
-		msg := strings.TrimSpace(parts[2])
+		msg := strings.TrimSpace(parts[3])
 		_, applied := targetMessages[msg]
 		commits = append(commits, Commit{
 			Hash:    parts[0],
 			Author:  strings.TrimSpace(parts[1]),
+			Date:    strings.TrimSpace(parts[2]),
 			Message: msg,
 			Applied: applied,
 		})
