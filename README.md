@@ -4,9 +4,10 @@ A CLI toolkit to supercharge your git workflow. Run as `gitmt <command>`.
 
 ## Commands
 
-| Command   | Description                                       |
-|-----------|---------------------------------------------------|
-| `compare` | Compare two branches and surface unmerged commits |
+| Command   | Description                                                  |
+|-----------|--------------------------------------------------------------|
+| `compare` | Compare two branches and surface unmerged commits            |
+| `scan`    | Group pending commits into safe cherry-pick batches          |
 
 More commands coming soon.
 
@@ -57,7 +58,7 @@ make install
 
 ### Usage
 
-```
+```text
 gitmt compare [flags] [source target]
 ```
 
@@ -100,7 +101,7 @@ gitmt compare -prefixes XS,XI develop master
 
 Colored list grouped by status.
 
-```
+```text
 Branch comparison
   source : develop
   target : master
@@ -122,7 +123,7 @@ Summary
 
 Box-drawn table with dynamic column widths.
 
-```
+```text
 ┌─────────┬─────────┬──────────┬─────────────────────┐
 │ STATUS  │ HASH    │ AUTHOR   │ MESSAGE             │
 ├─────────┼─────────┼──────────┼─────────────────────┤
@@ -208,6 +209,64 @@ show_ticket_authors: true  # show authors in ticket summary (default: true)
 | `format`              | Output style: `default`, `table`, `json`, or `csv`                                                 |
 | `prefixes`            | List of Jira ticket prefixes to scan for and group in the ticket summary                           |
 | `show_ticket_authors` | Show authors per ticket in the ticket summary. Defaults to `true`                                  |
+
+---
+
+## scan
+
+Analyzes pending commits and groups them into batches that must be cherry-picked together. Two commits end up in the same batch when they touch at least one common file — cherry-picking them separately would risk a conflict.
+
+`gitmt scan` runs the same branch comparison as `compare` to find pending commits, then fetches the file list for each one (`git diff-tree`). It uses a union-find algorithm to cluster commits that share files into a single batch. Commits with no file overlap with any other pending commit are marked independent and can be cherry-picked on their own.
+
+```text
+gitmt scan [flags] [source target]
+```
+
+Accepts the same `-source`, `-target`, and `.gitmt.yml` config as `compare`.
+
+### scan examples
+
+```bash
+# positional args
+gitmt scan develop master
+
+# with flags
+gitmt scan -source develop -target master
+```
+
+### Output
+
+Each batch is listed in order from newest to oldest commit. Independent commits are green; batches that must go together are yellow.
+
+```text
+Scan — cherry-pick batches
+  source  : develop
+  target  : master
+  pending : 5 commit(s)
+  batches : 3
+
+● Batch 1  2 commits — cherry-pick together
+  a1b2c3d  feat: update user auth service  (3 file(s))
+  e4f5g6h  fix: auth token validation edge case  (2 file(s))
+  shared:
+    src/auth/service.go
+    src/auth/token.go
+
+● Batch 2  1 commit — independent
+  i7j8k9l  feat: add dashboard summary widget  (1 file(s))
+
+● Batch 3  2 commits — cherry-pick together
+  m1n2o3p  refactor: extract payment helpers  (4 file(s))
+  q4r5s6t  fix: payment rounding error  (2 file(s))
+  shared:
+    src/payment/helpers.go
+```
+
+When all pending commits are independent the output shows one green batch per commit. When all commits are applied the scan exits with a message instead.
+
+```text
+All commits already applied — nothing to scan.
+```
 
 ---
 

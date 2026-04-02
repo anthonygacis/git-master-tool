@@ -84,6 +84,20 @@ func checkGitRepo() error {
 	return err
 }
 
+func getCommitFiles(hash string) ([]string, error) {
+	out, err := git("diff-tree", "--no-commit-id", "-r", "--name-only", hash)
+	if err != nil {
+		return nil, err
+	}
+	var files []string
+	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			files = append(files, line)
+		}
+	}
+	return files, nil
+}
+
 func git(args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
 	out, err := cmd.Output()
