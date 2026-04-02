@@ -8,6 +8,7 @@ A CLI toolkit to supercharge your git workflow. Run as `gitmt <command>`.
 |-----------|--------------------------------------------------------------|
 | `compare` | Compare two branches and surface unmerged commits            |
 | `scan`    | Group pending commits into safe cherry-pick batches          |
+| `pick`    | Interactively cherry-pick a batch or individual commit       |
 | `upgrade` | Upgrade gitmt to the latest release                          |
 
 ---
@@ -276,6 +277,112 @@ When all pending commits are independent the output shows one green batch per co
 
 ```text
 All commits already applied — nothing to scan.
+```
+
+---
+
+## pick
+
+Interactively cherry-picks pending commits onto the current branch. Only unapplied commits are shown. Navigate with arrow keys, toggle selections with space, and confirm with enter. Supports multi-select for both modes.
+
+```text
+gitmt pick [flags] [source target]
+```
+
+### pick flags
+
+| Flag            | Description                       | Default |
+|-----------------|-----------------------------------|---------|
+| `-source`       | Source branch                     |         |
+| `-target`       | Target branch                     |         |
+| `-show-author`  | Show commit author: `true\|false` | `true`  |
+
+### Controls
+
+| Key         | Action                          |
+|-------------|---------------------------------|
+| `↑` / `↓`   | Move cursor                     |
+| `space`     | Toggle selection (multi-select) |
+| `enter`     | Confirm / select                |
+| `q` / `esc` | Quit                            |
+
+### Batch mode
+
+Shows commits grouped by shared files (same logic as `scan`). Multiple batches can be selected. All selected commits are applied oldest-first to avoid conflicts.
+
+### Individual mode
+
+Lists every pending commit. Commits belonging to a multi-commit batch are flagged with `⚠ batch N` so the user knows cherry-picking them alone may cause a conflict. Multiple commits can be selected.
+
+### pick output
+
+**Step 1 — mode selection:**
+
+```text
+Cherry-pick   develop → master
+  5 pending commit(s)   3 batch(es)
+
+ ▶ Batch      cherry-pick related commits together
+   Individual  pick any commits regardless of grouping
+
+  ↑↓ move   [enter] select   [q] quit
+```
+
+**Step 2 — batch multi-select:**
+
+```text
+Select batches to cherry-pick
+  3 batch(es)
+
+ ▶ [✓] Batch 1  2 commits — cherry-pick together
+        a1b2c3d  (Jane Doe)  feat: update user auth service
+        e4f5g6h  (Jane Doe)  fix: auth token validation edge case
+        shared: src/auth/service.go, src/auth/token.go
+   [ ] Batch 2  1 commit — independent
+        i7j8k9l  (John Smith)  feat: add dashboard summary widget
+   [✓] Batch 3  2 commits — cherry-pick together
+        m1n2o3p  (Jane Doe)  refactor: extract payment helpers
+        q4r5s6t  (Jane Doe)  fix: payment rounding error
+        shared: src/payment/helpers.go
+
+  ↑↓ move   [space] toggle   [enter] confirm   [q] quit
+```
+
+**Step 2 — individual multi-select:**
+
+```text
+Select commits to cherry-pick
+  5 pending commit(s)
+
+ ▶ [✓] a1b2c3d  (Jane Doe)  feat: update user auth service  ⚠ batch 1
+   [ ] e4f5g6h  (Jane Doe)  fix: auth token validation  ⚠ batch 1
+   [✓] i7j8k9l  (John Smith)  feat: add dashboard summary widget
+   [ ] m1n2o3p  (Jane Doe)  refactor: extract payment helpers  ⚠ batch 3
+   [ ] q4r5s6t  (Jane Doe)  fix: payment rounding error  ⚠ batch 3
+
+  ↑↓ move   [space] toggle   [enter] confirm   [q] quit
+```
+
+**Step 3 — confirmation:**
+
+```text
+About to cherry-pick 3 commits:
+  git cherry-pick e4f5g6h a1b2c3d i7j8k9l
+
+Proceed? [y]es / [n]o: y
+
+→ git cherry-pick e4f5b6h a1b2c3d i7j8k9l
+
+✓ Cherry-pick complete
+```
+
+Commits are always applied oldest-first regardless of selection order.
+
+If cherry-pick fails due to a conflict, git is left in the usual conflict state:
+
+```text
+error: cherry-pick failed
+       resolve conflicts then run: git cherry-pick --continue
 ```
 
 ---
