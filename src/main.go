@@ -19,6 +19,7 @@ type Config struct {
 	Target            string   `yaml:"target"`
 	Show              string   `yaml:"show"`
 	ShowAuthor        *bool    `yaml:"show_author"`
+	ShowDate          *bool    `yaml:"show_date"`
 	Format            string   `yaml:"format"`
 	Prefixes          []string `yaml:"prefixes"`
 	ShowTicketAuthors *bool    `yaml:"show_ticket_authors"`
@@ -61,6 +62,7 @@ func runCompare() {
 		flagTarget            = flag.String("target", "", "target branch")
 		flagShow              = flag.String("show", "", "output filter: pending|all")
 		flagShowAuthor        = flag.String("show-author", "", "show commit author: true|false")
+		flagShowDate          = flag.String("show-date", "", "show commit date: true|false")
 		flagFormat            = flag.String("format", "", "output format: default|table|json|csv")
 		flagPrefixes          = flag.String("prefixes", "", "jira prefixes for ticket summary, comma-separated (e.g. XS,XI)")
 		flagShowTicketAuthors = flag.String("show-ticket-authors", "", "show authors in ticket summary: true|false")
@@ -86,6 +88,10 @@ func runCompare() {
 	if *flagShowAuthor != "" {
 		v := *flagShowAuthor == "true"
 		cfg.ShowAuthor = &v
+	}
+	if *flagShowDate != "" {
+		v := *flagShowDate == "true"
+		cfg.ShowDate = &v
 	}
 	if *flagFormat != "" {
 		cfg.Format = *flagFormat

@@ -71,7 +71,8 @@ All options can be provided as flags, set in `.gitmt.yml`, or both — **flags a
 | `-source`               | Source branch (commits to cherry-pick from)        |             |
 | `-target`               | Target branch (branch to cherry-pick into)         |             |
 | `-show`                 | `pending` or `all`                                 | `all`       |
-| `-show-author`          | `true` or `false`                                  | `true`      |
+| `-show-author`          | Show commit author: `true` or `false`              | `true`      |
+| `-show-date`            | Show commit date and time: `true` or `false`       | `true`      |
 | `-format`               | `default`, `table`, `json`, or `csv`               | `default`   |
 | `-prefixes`             | Comma-separated Jira prefixes (e.g. `XS,XI`)       |             |
 | `-show-ticket-authors`  | Show authors in ticket summary: `true` or `false`  | `true`      |
@@ -108,11 +109,11 @@ Branch comparison
   base   : a1a2198
 
  Pending — not yet in master:
-  1. 20b048a  (Jane Doe)  feat: add feature C
-  2. dacf154  (Jane Doe)  feat: add feature B
+  1. 20b048a  2026-03-01 14:22  (Jane Doe)  feat: add feature C
+  2. dacf154  2026-02-28 09:05  (Jane Doe)  feat: add feature B
 
  Already applied — commit message found in master:
-  1. eed2e8d  (Jane Doe)  feat: add feature A
+  1. eed2e8d  2026-02-20 11:30  (Jane Doe)  feat: add feature A
 
 Summary
   pending    2 commit(s) need cherry-picking into master
@@ -124,13 +125,13 @@ Summary
 Box-drawn table with dynamic column widths.
 
 ```text
-┌─────────┬─────────┬──────────┬─────────────────────┐
-│ STATUS  │ HASH    │ AUTHOR   │ MESSAGE             │
-├─────────┼─────────┼──────────┼─────────────────────┤
-│ pending │ 20b048a │ Jane Doe │ feat: add feature C │
-│ pending │ dacf154 │ Jane Doe │ feat: add feature B │
-│ applied │ eed2e8d │ Jane Doe │ feat: add feature A │
-└─────────┴─────────┴──────────┴─────────────────────┘
+┌─────────┬─────────┬──────────────────┬──────────┬─────────────────────┐
+│ STATUS  │ HASH    │ DATE             │ AUTHOR   │ MESSAGE             │
+├─────────┼─────────┼──────────────────┼──────────┼─────────────────────┤
+│ pending │ 20b048a │ 2026-03-01 14:22 │ Jane Doe │ feat: add feature C │
+│ pending │ dacf154 │ 2026-02-28 09:05 │ Jane Doe │ feat: add feature B │
+│ applied │ eed2e8d │ 2026-02-20 11:30 │ Jane Doe │ feat: add feature A │
+└─────────┴─────────┴──────────────────┴──────────┴─────────────────────┘
 
   2 pending   1 applied
 ```
@@ -140,10 +141,10 @@ Box-drawn table with dynamic column widths.
 Standard CSV output — useful for importing into spreadsheets or further shell processing.
 
 ```csv
-status,hash,author,message
-pending,20b048a,Jane Doe,feat: add feature C
-pending,dacf154,Jane Doe,feat: add feature B
-applied,eed2e8d,Jane Doe,feat: add feature A
+status,hash,date,author,message
+pending,20b048a,2026-03-01 14:22,Jane Doe,feat: add feature C
+pending,dacf154,2026-02-28 09:05,Jane Doe,feat: add feature B
+applied,eed2e8d,2026-02-20 11:30,Jane Doe,feat: add feature A
 ```
 
 Fields with commas or quotes are automatically escaped per RFC 4180.
@@ -158,9 +159,9 @@ Machine-readable output, useful for piping into other tools.
   "target": "master",
   "base": "a1a2198",
   "commits": [
-    { "hash": "20b048a", "author": "Jane Doe", "message": "feat: add feature C", "status": "pending" },
-    { "hash": "dacf154", "author": "Jane Doe", "message": "feat: add feature B", "status": "pending" },
-    { "hash": "eed2e8d", "author": "Jane Doe", "message": "feat: add feature A", "status": "applied" }
+    { "hash": "20b048a", "date": "2026-03-01 14:22", "author": "Jane Doe", "message": "feat: add feature C", "status": "pending" },
+    { "hash": "dacf154", "date": "2026-02-28 09:05", "author": "Jane Doe", "message": "feat: add feature B", "status": "pending" },
+    { "hash": "eed2e8d", "date": "2026-02-20 11:30", "author": "Jane Doe", "message": "feat: add feature A", "status": "applied" }
   ],
   "summary": { "pending": 2, "applied": 1 }
 }
@@ -193,6 +194,7 @@ source: develop
 target: master
 show: all                  # "pending" or "all" (default: "all")
 show_author: true          # show commit author (default: true)
+show_date: true            # show commit date and time (default: true)
 format: default            # "default", "table", "json", or "csv" (default: "default")
 prefixes:                  # Jira prefixes to scan for ticket summary (default: none)
   - XS
@@ -200,12 +202,15 @@ prefixes:                  # Jira prefixes to scan for ticket summary (default: 
 show_ticket_authors: true  # show authors in ticket summary (default: true)
 ```
 
+The `show_author`, `show_date` fields are shared across `compare`, `scan`, and `pick`.
+
 | Field                 | Description                                                                                        |
 |-----------------------|----------------------------------------------------------------------------------------------------|
 | `source`              | Branch containing the commits you are cherry-picking from                                          |
 | `target`              | Branch you are cherry-picking into                                                                 |
 | `show`                | `all` shows pending + already applied. `pending` shows only commits that still need cherry-picking |
 | `show_author`         | Show commit author next to each entry. Defaults to `true`                                          |
+| `show_date`           | Show commit date and time next to each entry. Defaults to `true`                                   |
 | `format`              | Output style: `default`, `table`, `json`, or `csv`                                                 |
 | `prefixes`            | List of Jira ticket prefixes to scan for and group in the ticket summary                           |
 | `show_ticket_authors` | Show authors per ticket in the ticket summary. Defaults to `true`                                  |
@@ -224,13 +229,14 @@ gitmt scan [flags] [source target]
 
 ### scan flags
 
-| Flag            | Description                       | Default |
-|-----------------|-----------------------------------|---------|
-| `-source`       | Source branch                     |         |
-| `-target`       | Target branch                     |         |
-| `-show-author`  | Show commit author: `true\|false` | `true`  |
+| Flag            | Description                              | Default |
+|-----------------|------------------------------------------|---------|
+| `-source`       | Source branch                            |         |
+| `-target`       | Target branch                            |         |
+| `-show-author`  | Show commit author: `true\|false`        | `true`  |
+| `-show-date`    | Show commit date and time: `true\|false` | `true`  |
 
-Reads `-source`, `-target`, and `show_author` from `.gitmt.yml` when present — flags take precedence.
+Reads `-source`, `-target`, `show_author`, and `show_date` from `.gitmt.yml` when present — flags take precedence.
 
 ### scan examples
 
@@ -257,18 +263,18 @@ Scan — cherry-pick batches
   batches : 3
 
 ● Batch 1  2 commits — cherry-pick together
-  a1b2c3d  (Jane Doe)  feat: update user auth service  (3 file(s))
-  e4f5g6h  (Jane Doe)  fix: auth token validation edge case  (2 file(s))
+  a1b2c3d  2026-03-01 14:22  (Jane Doe)  feat: update user auth service  (3 file(s))
+  e4f5g6h  2026-03-01 09:11  (Jane Doe)  fix: auth token validation edge case  (2 file(s))
   shared:
     src/auth/service.go
     src/auth/token.go
 
 ● Batch 2  1 commit — independent
-  i7j8k9l  (John Smith)  feat: add dashboard summary widget  (1 file(s))
+  i7j8k9l  2026-02-28 17:45  (John Smith)  feat: add dashboard summary widget  (1 file(s))
 
 ● Batch 3  2 commits — cherry-pick together
-  m1n2o3p  (Jane Doe)  refactor: extract payment helpers  (4 file(s))
-  q4r5s6t  (Jane Doe)  fix: payment rounding error  (2 file(s))
+  m1n2o3p  2026-02-27 10:30  (Jane Doe)  refactor: extract payment helpers  (4 file(s))
+  q4r5s6t  2026-02-26 16:02  (Jane Doe)  fix: payment rounding error  (2 file(s))
   shared:
     src/payment/helpers.go
 ```
@@ -291,11 +297,12 @@ gitmt pick [flags] [source target]
 
 ### pick flags
 
-| Flag            | Description                       | Default |
-|-----------------|-----------------------------------|---------|
-| `-source`       | Source branch                     |         |
-| `-target`       | Target branch                     |         |
-| `-show-author`  | Show commit author: `true\|false` | `true`  |
+| Flag            | Description                              | Default |
+|-----------------|------------------------------------------|---------|
+| `-source`       | Source branch                            |         |
+| `-target`       | Target branch                            |         |
+| `-show-author`  | Show commit author: `true\|false`        | `true`  |
+| `-show-date`    | Show commit date and time: `true\|false` | `true`  |
 
 ### Controls
 
@@ -335,14 +342,14 @@ Select batches to cherry-pick
   3 batch(es)
 
  ▶ [✓] Batch 1  2 commits — cherry-pick together
-        a1b2c3d  (Jane Doe)  feat: update user auth service
-        e4f5g6h  (Jane Doe)  fix: auth token validation edge case
+        a1b2c3d  2026-03-01 14:22  (Jane Doe)  feat: update user auth service
+        e4f5g6h  2026-03-01 09:11  (Jane Doe)  fix: auth token validation edge case
         shared: src/auth/service.go, src/auth/token.go
    [ ] Batch 2  1 commit — independent
-        i7j8k9l  (John Smith)  feat: add dashboard summary widget
+        i7j8k9l  2026-02-28 17:45  (John Smith)  feat: add dashboard summary widget
    [✓] Batch 3  2 commits — cherry-pick together
-        m1n2o3p  (Jane Doe)  refactor: extract payment helpers
-        q4r5s6t  (Jane Doe)  fix: payment rounding error
+        m1n2o3p  2026-02-27 10:30  (Jane Doe)  refactor: extract payment helpers
+        q4r5s6t  2026-02-26 16:02  (Jane Doe)  fix: payment rounding error
         shared: src/payment/helpers.go
 
   ↑↓ move   [space] toggle   [enter] confirm   [q] quit
@@ -354,11 +361,11 @@ Select batches to cherry-pick
 Select commits to cherry-pick
   5 pending commit(s)
 
- ▶ [✓] a1b2c3d  (Jane Doe)  feat: update user auth service  ⚠ batch 1
-   [ ] e4f5g6h  (Jane Doe)  fix: auth token validation  ⚠ batch 1
-   [✓] i7j8k9l  (John Smith)  feat: add dashboard summary widget
-   [ ] m1n2o3p  (Jane Doe)  refactor: extract payment helpers  ⚠ batch 3
-   [ ] q4r5s6t  (Jane Doe)  fix: payment rounding error  ⚠ batch 3
+ ▶ [✓] a1b2c3d  2026-03-01 14:22  (Jane Doe)  feat: update user auth service  ⚠ batch 1
+   [ ] e4f5g6h  2026-03-01 09:11  (Jane Doe)  fix: auth token validation  ⚠ batch 1
+   [✓] i7j8k9l  2026-02-28 17:45  (John Smith)  feat: add dashboard summary widget
+   [ ] m1n2o3p  2026-02-27 10:30  (Jane Doe)  refactor: extract payment helpers  ⚠ batch 3
+   [ ] q4r5s6t  2026-02-26 16:02  (Jane Doe)  fix: payment rounding error  ⚠ batch 3
 
   ↑↓ move   [space] toggle   [enter] confirm   [q] quit
 ```

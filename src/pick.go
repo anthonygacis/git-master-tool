@@ -14,6 +14,7 @@ func runPick() {
 		flagSource     = flag.String("source", "", "source branch")
 		flagTarget     = flag.String("target", "", "target branch")
 		flagShowAuthor = flag.String("show-author", "", "show commit author: true|false")
+		flagShowDate   = flag.String("show-date", "", "show commit date: true|false")
 	)
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: gitmt pick [flags] [source target]\n\nFlags:\n")
@@ -32,6 +33,10 @@ func runPick() {
 	if *flagShowAuthor != "" {
 		v := *flagShowAuthor == "true"
 		cfg.ShowAuthor = &v
+	}
+	if *flagShowDate != "" {
+		v := *flagShowDate == "true"
+		cfg.ShowDate = &v
 	}
 	if args := flag.Args(); len(args) == 2 {
 		cfg.Source = args[0]
@@ -84,6 +89,7 @@ func runPick() {
 
 	batches := groupBySharedFiles(pending, commitFiles)
 	showAuthor := cfg.ShowAuthor == nil || *cfg.ShowAuthor
+	showDate := cfg.ShowDate == nil || *cfg.ShowDate
 
 	mode := pickMode(cfg.Source, cfg.Target, len(pending), len(batches))
 	if mode < 0 {
@@ -93,9 +99,9 @@ func runPick() {
 	var hashes []string
 	switch mode {
 	case 0:
-		hashes = pickBatches(batches, pending, showAuthor)
+		hashes = pickBatches(batches, pending, showAuthor, showDate)
 	case 1:
-		hashes = pickIndividual(batches, pending, showAuthor)
+		hashes = pickIndividual(batches, pending, showAuthor, showDate)
 	}
 
 	if len(hashes) == 0 {
@@ -133,7 +139,7 @@ func pickMode(source, target string, nPending, nBatches int) int {
 	return sel[0]
 }
 
-func pickBatches(batches []scanBatch, pending []Commit, showAuthor bool) []string {
+func pickBatches(batches []scanBatch, pending []Commit, showAuthor, showDate bool) []string {
 	items := make([]tuiItem, len(batches))
 	for i, b := range batches {
 		var main string
@@ -149,7 +155,11 @@ func pickBatches(batches []scanBatch, pending []Commit, showAuthor bool) []strin
 			if showAuthor && c.Author != "" {
 				author = "  (" + c.Author + ")"
 			}
-			sub = append(sub, c.Hash+author+"  "+c.Message)
+			date := ""
+			if showDate && c.Date != "" {
+				date = "  " + c.Date
+			}
+			sub = append(sub, c.Hash+date+author+"  "+c.Message)
 		}
 		if len(b.sharedFiles) > 0 {
 			sub = append(sub, "shared: "+strings.Join(b.sharedFiles, ", "))
@@ -177,7 +187,7 @@ func pickBatches(batches []scanBatch, pending []Commit, showAuthor bool) []strin
 	return chronologicalHashes(pending, selected)
 }
 
-func pickIndividual(batches []scanBatch, pending []Commit, showAuthor bool) []string {
+func pickIndividual(batches []scanBatch, pending []Commit, showAuthor, showDate bool) []string {
 	batchOf := make(map[string]int)
 	for i, b := range batches {
 		if len(b.commits) > 1 {
@@ -193,12 +203,16 @@ func pickIndividual(batches []scanBatch, pending []Commit, showAuthor bool) []st
 		if showAuthor && c.Author != "" {
 			author = "  (" + c.Author + ")"
 		}
+		date := ""
+		if showDate && c.Date != "" {
+			date = "  " + c.Date
+		}
 		tag := ""
 		if bn, inBatch := batchOf[c.Hash]; inBatch {
 			tag = colorYellow + fmt.Sprintf("⚠ batch %d", bn) + colorReset
 		}
 		items[i] = tuiItem{
-			main: c.Hash + author + "  " + c.Message,
+			main: c.Hash + date + author + "  " + c.Message,
 			tag:  tag,
 		}
 	}

@@ -21,6 +21,7 @@ const (
 func printOutput(cfg Config, source, target, mergeBase string, commits []Commit) {
 	showApplied := cfg.Show != "pending"
 	showAuthor := cfg.ShowAuthor == nil || *cfg.ShowAuthor
+	showDate := cfg.ShowDate == nil || *cfg.ShowDate
 	showTicketAuthors := cfg.ShowTicketAuthors == nil || *cfg.ShowTicketAuthors
 
 	var ticketGroups map[string][]*TicketEntry
@@ -34,23 +35,23 @@ func printOutput(cfg Config, source, target, mergeBase string, commits []Commit)
 
 	switch cfg.Format {
 	case "table":
-		printTable(source, target, mergeBase, commits, showApplied, showAuthor)
+		printTable(source, target, mergeBase, commits, showApplied, showAuthor, showDate)
 		if len(ticketGroups) > 0 {
 			printTicketSummaryTable(ticketGroups, cfg.Prefixes, showTicketAuthors)
 		}
 	case "json":
-		printJSON(source, target, mergeBase, commits, showApplied, ticketGroups, cfg.Prefixes, showTicketAuthors)
+		printJSON(source, target, mergeBase, commits, showApplied, showDate, ticketGroups, cfg.Prefixes, showTicketAuthors)
 	case "csv":
-		printCSV(commits, showApplied, showAuthor)
+		printCSV(commits, showApplied, showAuthor, showDate)
 	default:
-		printDefault(source, target, mergeBase, commits, showApplied, showAuthor, cfg.Show)
+		printDefault(source, target, mergeBase, commits, showApplied, showAuthor, showDate, cfg.Show)
 		if len(ticketGroups) > 0 {
 			printTicketSummaryDefault(ticketGroups, cfg.Prefixes, showTicketAuthors)
 		}
 	}
 }
 
-func printDefault(source, target, mergeBase string, commits []Commit, showApplied, showAuthor bool, show string) {
+func printDefault(source, target, mergeBase string, commits []Commit, showApplied, showAuthor, showDate bool, show string) {
 	fmt.Printf("\n%s%sBranch comparison%s\n", colorBold, colorCyan, colorReset)
 	fmt.Printf("%s  source : %s%s\n", colorDim, colorReset, source)
 	fmt.Printf("%s  target : %s%s\n", colorDim, colorReset, target)
@@ -60,6 +61,9 @@ func printDefault(source, target, mergeBase string, commits []Commit, showApplie
 	}
 	if !showAuthor {
 		fmt.Printf("%s  author : %shidden%s\n", colorDim, colorReset, colorReset)
+	}
+	if !showDate {
+		fmt.Printf("%s  date   : %shidden%s\n", colorDim, colorReset, colorReset)
 	}
 
 	if len(commits) == 0 {
@@ -73,9 +77,10 @@ func printDefault(source, target, mergeBase string, commits []Commit, showApplie
 	if len(pending) > 0 {
 		fmt.Printf("\n%s%s Pending — not yet in %s:%s\n", colorBold, colorYellow, target, colorReset)
 		for i, c := range pending {
-			fmt.Printf("  %s%d.%s %s%s%s%s  %s\n",
+			fmt.Printf("  %s%d.%s %s%s%s%s%s  %s\n",
 				colorDim, i+1, colorReset,
 				colorYellow, c.Hash, colorReset,
+				fmtDate(c.Date, showDate),
 				fmtAuthor(c.Author, showAuthor),
 				c.Message,
 			)
@@ -85,9 +90,10 @@ func printDefault(source, target, mergeBase string, commits []Commit, showApplie
 	if showApplied && len(applied) > 0 {
 		fmt.Printf("\n%s%s Already applied — commit message found in %s:%s\n", colorBold, colorGreen, target, colorReset)
 		for i, c := range applied {
-			fmt.Printf("  %s%d.%s %s%s%s%s  %s%s%s\n",
+			fmt.Printf("  %s%d.%s %s%s%s%s%s  %s%s%s\n",
 				colorDim, i+1, colorReset,
 				colorGreen, c.Hash, colorReset,
+				fmtDate(c.Date, showDate),
 				fmtAuthor(c.Author, showAuthor),
 				colorDim, c.Message, colorReset,
 			)
@@ -111,8 +117,15 @@ func fmtAuthor(author string, show bool) string {
 	return fmt.Sprintf("  %s(%s)%s", colorDim, author, colorReset)
 }
 
-func printTable(source, target, mergeBase string, commits []Commit, showApplied, showAuthor bool) {
-	type row struct{ status, hash, author, message string }
+func fmtDate(date string, show bool) string {
+	if !show || date == "" {
+		return ""
+	}
+	return fmt.Sprintf("  %s%s%s", colorDim, date, colorReset)
+}
+
+func printTable(source, target, mergeBase string, commits []Commit, showApplied, showAuthor, showDate bool) {
+	type row struct{ status, hash, date, author, message string }
 
 	var rows []row
 	for _, c := range commits {
@@ -123,16 +136,19 @@ func printTable(source, target, mergeBase string, commits []Commit, showApplied,
 		if c.Applied {
 			status = "applied"
 		}
-		rows = append(rows, row{status, c.Hash, c.Author, c.Message})
+		rows = append(rows, row{status, c.Hash, c.Date, c.Author, c.Message})
 	}
 
-	wStatus, wHash, wAuthor, wMsg := 6, 4, 6, 7
+	wStatus, wHash, wDate, wAuthor, wMsg := 6, 4, 4, 6, 7
 	for _, r := range rows {
 		if l := len(r.status); l > wStatus {
 			wStatus = l
 		}
 		if l := len(r.hash); l > wHash {
 			wHash = l
+		}
+		if l := len(r.date); l > wDate {
+			wDate = l
 		}
 		if l := len(r.author); l > wAuthor {
 			wAuthor = l
@@ -143,7 +159,11 @@ func printTable(source, target, mergeBase string, commits []Commit, showApplied,
 	}
 
 	widths := []int{wStatus, wHash, wMsg}
-	if showAuthor {
+	if showDate && showAuthor {
+		widths = []int{wStatus, wHash, wDate, wAuthor, wMsg}
+	} else if showDate {
+		widths = []int{wStatus, wHash, wDate, wMsg}
+	} else if showAuthor {
 		widths = []int{wStatus, wHash, wAuthor, wMsg}
 	}
 
@@ -172,6 +192,9 @@ func printTable(source, target, mergeBase string, commits []Commit, showApplied,
 			cell(wStatus, r.status, statusColor),
 			cell(wHash, r.hash, colorDim),
 		}
+		if showDate {
+			cells = append(cells, cell(wDate, r.date, colorDim))
+		}
 		if showAuthor {
 			cells = append(cells, cell(wAuthor, r.author, ""))
 		}
@@ -183,6 +206,9 @@ func printTable(source, target, mergeBase string, commits []Commit, showApplied,
 		cells := []string{
 			cell(wStatus, "STATUS", colorBold),
 			cell(wHash, "HASH", colorBold),
+		}
+		if showDate {
+			cells = append(cells, cell(wDate, "DATE", colorBold))
 		}
 		if showAuthor {
 			cells = append(cells, cell(wAuthor, "AUTHOR", colorBold))
@@ -237,6 +263,7 @@ type jsonOutput struct {
 
 type jsonCommit struct {
 	Hash    string `json:"hash"`
+	Date    string `json:"date,omitempty"`
 	Author  string `json:"author"`
 	Message string `json:"message"`
 	Status  string `json:"status"`
@@ -259,7 +286,7 @@ type jsonTicketEntry struct {
 	Authors []string `json:"authors,omitempty"`
 }
 
-func printJSON(source, target, mergeBase string, commits []Commit, showApplied bool, ticketGroups map[string][]*TicketEntry, prefixes []string, showTicketAuthors bool) {
+func printJSON(source, target, mergeBase string, commits []Commit, showApplied, showDate bool, ticketGroups map[string][]*TicketEntry, prefixes []string, showTicketAuthors bool) {
 	jCommits := make([]jsonCommit, 0, len(commits))
 	pending, applied := 0, 0
 
@@ -274,12 +301,16 @@ func printJSON(source, target, mergeBase string, commits []Commit, showApplied b
 		if !showApplied && c.Applied {
 			continue
 		}
-		jCommits = append(jCommits, jsonCommit{
+		jc := jsonCommit{
 			Hash:    c.Hash,
 			Author:  c.Author,
 			Message: c.Message,
 			Status:  status,
-		})
+		}
+		if showDate {
+			jc.Date = c.Date
+		}
+		jCommits = append(jCommits, jc)
 	}
 
 	var jTickets []jsonTicketGroup
@@ -428,13 +459,17 @@ func printTicketSummaryTable(groups map[string][]*TicketEntry, prefixes []string
 	fmt.Println()
 }
 
-func printCSV(commits []Commit, showApplied, showAuthor bool) {
+func printCSV(commits []Commit, showApplied, showAuthor, showDate bool) {
 	w := csv.NewWriter(os.Stdout)
 
-	header := []string{"status", "hash", "message"}
-	if showAuthor {
-		header = []string{"status", "hash", "author", "message"}
+	header := []string{"status", "hash"}
+	if showDate {
+		header = append(header, "date")
 	}
+	if showAuthor {
+		header = append(header, "author")
+	}
+	header = append(header, "message")
 	_ = w.Write(header)
 
 	for _, c := range commits {
@@ -445,10 +480,14 @@ func printCSV(commits []Commit, showApplied, showAuthor bool) {
 		if c.Applied {
 			status = "applied"
 		}
-		record := []string{status, c.Hash, c.Message}
-		if showAuthor {
-			record = []string{status, c.Hash, c.Author, c.Message}
+		record := []string{status, c.Hash}
+		if showDate {
+			record = append(record, c.Date)
 		}
+		if showAuthor {
+			record = append(record, c.Author)
+		}
+		record = append(record, c.Message)
 		_ = w.Write(record)
 	}
 
