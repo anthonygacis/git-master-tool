@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -82,6 +83,25 @@ func validateBranch(branch string) error {
 func checkGitRepo() error {
 	_, err := git("rev-parse", "--git-dir")
 	return err
+}
+
+func getCurrentBranch() (string, error) {
+	out, err := git("rev-parse", "--abbrev-ref", "HEAD")
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
+}
+
+func cherryPickInProgress() bool {
+	out, err := git("rev-parse", "--git-dir")
+	if err != nil {
+		return false
+	}
+	gitDir := strings.TrimSpace(out)
+	_, err1 := os.Stat(gitDir + "/CHERRY_PICK_HEAD")
+	_, err2 := os.Stat(gitDir + "/sequencer")
+	return err1 == nil || err2 == nil
 }
 
 func getCommitFiles(hash string) ([]string, error) {
