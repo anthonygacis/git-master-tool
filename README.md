@@ -9,6 +9,7 @@ A CLI toolkit to supercharge your git workflow. Run as `gitmt <command>`.
 | `compare` | Compare two branches and surface unmerged commits            |
 | `scan`    | Group pending commits into safe cherry-pick batches          |
 | `pick`    | Interactively cherry-pick a batch or individual commit       |
+| `tagdiff` | List commits between two tags                                |
 | `upgrade` | Upgrade gitmt to the latest release                          |
 
 ---
@@ -390,6 +391,86 @@ If cherry-pick fails due to a conflict, git is left in the usual conflict state:
 ```text
 error: cherry-pick failed
        resolve conflicts then run: git cherry-pick --continue
+```
+
+---
+
+## tagdiff
+
+Lists commits between two tags. If only one tag is provided, the previous tag is detected automatically.
+
+```text
+gitmt tagdiff [from] <to>
+```
+
+### tagdiff flags
+
+| Flag            | Description                              | Default     |
+|-----------------|------------------------------------------|-------------|
+| `-show-author`  | Show commit author: `true\|false`        | `true`      |
+| `-show-date`    | Show commit date and time: `true\|false` | `true`      |
+| `-format`       | Output format: `default` or `json`       | `default`   |
+
+Reads `show_author`, `show_date`, and `format` from `.gitmt.yml` when present — flags take precedence.
+
+### tagdiff examples
+
+```bash
+# explicit range
+gitmt tagdiff v0.0.1 v0.0.2
+
+# auto-detect previous tag
+gitmt tagdiff v0.0.2
+
+# diff previous tag vs the latest tag
+gitmt tagdiff latest
+
+# hide author and date
+gitmt tagdiff -show-author=false -show-date=false v0.0.1 v0.0.2
+
+# JSON output
+gitmt tagdiff -format json v0.0.1 v0.0.2
+```
+
+### tagdiff output
+
+```text
+Tag diff
+  from  : v0.0.1
+  to    : v0.0.2
+  total : 3 commit(s)
+
+  1. a1b2c3d  2026-03-10 14:22  (Jane Doe)  feat: add export endpoint
+  2. e4f5g6h  2026-03-09 09:11  (Jane Doe)  fix: pagination off-by-one
+  3. i7j8k9l  2026-03-08 17:45  (John Smith)  chore: bump dependencies
+```
+
+#### json output
+
+```json
+{
+  "from": "v0.0.1",
+  "to": "v0.0.2",
+  "total": 3,
+  "commits": [
+    { "hash": "a1b2c3d", "date": "2026-03-10 14:22", "author": "Jane Doe", "message": "feat: add export endpoint" },
+    { "hash": "e4f5g6h", "date": "2026-03-09 09:11", "author": "Jane Doe", "message": "fix: pagination off-by-one" },
+    { "hash": "i7j8k9l", "date": "2026-03-08 17:45", "author": "John Smith", "message": "chore: bump dependencies" }
+  ]
+}
+```
+
+When only one tag is given, the `from` is resolved automatically:
+
+```bash
+$ gitmt tagdiff v0.0.2
+# equivalent to: gitmt tagdiff v0.0.1 v0.0.2
+```
+
+If there are no commits between the two tags:
+
+```text
+No commits between v0.0.1 and v0.0.2.
 ```
 
 ---
