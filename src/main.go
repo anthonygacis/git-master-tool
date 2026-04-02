@@ -41,6 +41,8 @@ func main() {
 		runScan()
 	case "pick":
 		runPick()
+	case "tagdiff":
+		runTagDiff()
 	case "upgrade":
 		runUpgrade()
 	case "version", "--version", "-version":
@@ -53,7 +55,7 @@ func main() {
 }
 
 func printMainUsage() {
-	fmt.Fprintf(os.Stderr, "Usage: gitmt <command> [flags]\n\nCommands:\n  compare   Compare two git branches\n  scan      Group pending commits into safe cherry-pick batches\n  pick      Interactively cherry-pick a batch or individual commit\n  upgrade   Upgrade gitmt to the latest release\n  version   Print version\n\nRun 'gitmt <command> --help' for more information.\n")
+	fmt.Fprintf(os.Stderr, "Usage: gitmt <command> [flags]\n\nCommands:\n  compare   Compare two git branches\n  scan      Group pending commits into safe cherry-pick batches\n  pick      Interactively cherry-pick a batch or individual commit\n  tagdiff   List commits between two tags\n  upgrade   Upgrade gitmt to the latest release\n  version   Print version\n\nRun 'gitmt <command> --help' for more information.\n")
 }
 
 func runCompare() {
