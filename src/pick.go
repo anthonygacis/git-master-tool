@@ -132,7 +132,7 @@ func pickMode(source, target string, nPending, nBatches int) int {
 		fmt.Sprintf("%s%sCherry-pick%s   %s%s → %s%s", colorBold, colorCyan, colorReset, colorDim, source, target, colorReset),
 		fmt.Sprintf("%s  %d pending commit(s)   %d batch(es)%s", colorDim, nPending, nBatches, colorReset),
 	}
-	sel, ok := tuiSelect(header, items, false)
+	sel, ok := tuiSelect(header, items, false, nil)
 	if !ok {
 		return -1
 	}
@@ -173,7 +173,29 @@ func pickBatches(batches []scanBatch, pending []Commit, showAuthor, showDate boo
 		colorDim + fmt.Sprintf("  %d batch(es)", len(batches)) + colorReset,
 	}
 
-	sel, ok := tuiSelect(header, items, true)
+	batchStatusFn := func(picked []bool) string {
+		var nums []string
+		total := 0
+		for i, p := range picked {
+			if p {
+				nums = append(nums, fmt.Sprintf("%d", i+1))
+				total += len(batches[i].commits)
+			}
+		}
+		if len(nums) == 0 {
+			return colorDim + "  Selected: none" + colorReset
+		}
+		noun := "commit"
+		if total != 1 {
+			noun = "commits"
+		}
+		return fmt.Sprintf("%s  Selected: Batch %s%s  %s(%d %s)%s",
+			colorBold, strings.Join(nums, ", "), colorReset,
+			colorDim, total, noun, colorReset,
+		)
+	}
+
+	sel, ok := tuiSelect(header, items, true, batchStatusFn)
 	if !ok || len(sel) == 0 {
 		return nil
 	}
@@ -222,7 +244,7 @@ func pickIndividual(batches []scanBatch, pending []Commit, showAuthor, showDate 
 		colorDim + fmt.Sprintf("  %d pending commit(s)", len(pending)) + colorReset,
 	}
 
-	sel, ok := tuiSelect(header, items, true)
+	sel, ok := tuiSelect(header, items, true, nil)
 	if !ok || len(sel) == 0 {
 		return nil
 	}

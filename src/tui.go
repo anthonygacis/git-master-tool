@@ -13,7 +13,7 @@ type tuiItem struct {
 	tag  string
 }
 
-func tuiSelect(header []string, items []tuiItem, multi bool) ([]int, bool) {
+func tuiSelect(header []string, items []tuiItem, multi bool, statusFn func([]bool) string) ([]int, bool) {
 	fd := int(os.Stdin.Fd())
 	if !term.IsTerminal(fd) {
 		fmt.Fprintf(os.Stderr, "%serror:%s pick requires an interactive terminal\n", colorRed, colorReset)
@@ -47,8 +47,11 @@ func tuiSelect(header []string, items []tuiItem, multi bool) ([]int, bool) {
 
 	itemH := func(i int) int { return 1 + len(items[i].sub) }
 
-	// How many lines the fixed chrome uses (header + blank + above-indicator + below-indicator + blank + hint).
+	// How many lines the fixed chrome uses (header + optional status + blank + above-indicator + below-indicator + blank + hint).
 	chrome := len(header) + 1 + 1 + 1 + 1 + 1
+	if statusFn != nil {
+		chrome++
+	}
 
 	// Returns the index of the last item that fits in the viewport from 'from'.
 	lastVisible := func(from int) int {
@@ -89,6 +92,9 @@ func tuiSelect(header []string, items []tuiItem, multi bool) ([]int, bool) {
 
 		for _, h := range header {
 			line(h)
+		}
+		if statusFn != nil {
+			line(statusFn(picked))
 		}
 		line("")
 
