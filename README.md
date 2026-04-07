@@ -4,13 +4,14 @@ A CLI toolkit to supercharge your git workflow. Run as `gitmt <command>`.
 
 ## Commands
 
-| Command   | Description                                                  |
-|-----------|--------------------------------------------------------------|
-| `compare` | Compare two branches and surface unmerged commits            |
-| `scan`    | Group pending commits into safe cherry-pick batches          |
-| `pick`    | Interactively cherry-pick a batch or individual commit       |
-| `tagdiff` | List commits between two tags                                |
-| `upgrade` | Upgrade gitmt to the latest release                          |
+| Command   | Description                                                   |
+|-----------|---------------------------------------------------------------|
+| `compare` | Compare two branches and surface unmerged commits             |
+| `scan`    | Group pending commits into safe cherry-pick batches           |
+| `pick`    | Interactively cherry-pick a batch or individual commit        |
+| `search`  | Check if a commit message already exists to ensure uniqueness |
+| `tagdiff` | List commits between two tags                                 |
+| `upgrade` | Upgrade gitmt to the latest release                           |
 
 ---
 
@@ -391,6 +392,82 @@ If cherry-pick fails due to a conflict, git is left in the usual conflict state:
 ```text
 error: cherry-pick failed
        resolve conflicts then run: git cherry-pick --continue
+```
+
+---
+
+## search
+
+`compare` identifies applied commits by matching commit messages **exactly** between branches. This means every commit message must be unique — if two different commits share the same message, `compare` will incorrectly treat both as applied.
+
+Use `search` to check whether an exact commit message (e.g. a PR title) already exists in the branch history before merging or cherry-picking. It performs a `compare` internally and looks for an exact match in the combined result (pending + applied).
+
+```text
+gitmt search [flags] <message> [source target]
+```
+
+### search flags
+
+| Flag           | Description                              | Default     |
+|----------------|------------------------------------------|-------------|
+| `-source`      | Source branch to search in               |             |
+| `-target`      | Target branch to check against           |             |
+| `-show-author` | Show commit author: `true\|false`        | `true`      |
+| `-show-date`   | Show commit date and time: `true\|false` | `true`      |
+| `-format`      | Output format: `default` or `json`       | `default`   |
+
+Reads `source`, `target`, `show_author`, and `show_date` from `.gitmt.yml` when present — flags take precedence.
+
+### search examples
+
+```bash
+# check if an exact commit message already exists
+gitmt search "fix: pagination off-by-one" develop master
+
+# json output — returns {"match": true/false}
+gitmt search -format json "fix: pagination off-by-one" develop master
+
+# using flags
+gitmt search -source develop -target master "fix: pagination off-by-one"
+
+# source only (target from config)
+gitmt search "feat: TICKET-123 add export endpoint" develop
+```
+
+### search output
+
+```text
+Search
+  message : "fix: pagination off-by-one"
+  source  : develop
+  target  : master
+  base    : abc1234
+  found   : 1 match(es)  (0 pending, 1 applied)
+
+  applied  e4f5g6h  2026-03-09 09:11  (Jane Doe)  fix: pagination off-by-one  ✓ already in master
+```
+
+- `applied` — a commit with this exact message already exists in the target branch. `compare` would treat any new commit with the same message as already applied. **The commit message is not unique — rename it.**
+- `pending` — the message exists only in source and has not been applied to target yet.
+
+When no match is found:
+
+```text
+No commits with message "fix: pagination off-by-one" found in develop since merge base.
+```
+
+#### search json output
+
+```bash
+gitmt search -format json "fix: pagination off-by-one" develop master
+```
+
+```json
+{ "match": true }
+```
+
+```json
+{ "match": false }
 ```
 
 ---
